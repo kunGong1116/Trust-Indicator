@@ -2,7 +2,7 @@
 
 ## Project Description
   
-- **Developers:** COMP8715 Computing Project, Australian National University, Australia 2024 S2
+- **Developers:** COMP8715 Computing Project, Australian National University, Australia 2025 S1
   
 - **Background:** With the widespread use of social media and online digital media, the authenticity of photos and creative images has become a global concern. In this digital age, the extensive dissemination of images and advanced editing techniques make it difficult for ordinary users and consumers to discern the authenticity and credibility of images. Misleading, manipulated, or artificially generated images can lead to inaccurate and confusing information dissemination.
   
