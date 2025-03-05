@@ -1,0 +1,12 @@
+torch
+flask
+torchvision
+jwt
+requests
+flask_sqlalchemy
+flask_session
+flask_login
+flask_mail
+werkzeug
+sqlalchemy
+Pillow
