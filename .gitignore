@@ -1,0 +1,11 @@
+# database
+/instance
+
+# cache
+/flask_session_cache
+/uploads
+
+.vs
+.idea
+__pycache__
+.DS_Store
