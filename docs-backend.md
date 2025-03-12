@@ -3,7 +3,7 @@
 This API is part of a Flask-based web application that handles **user authentication**, **image uploads**, **image processing**, and **user interactions** such as favorites and feedback.
 ## 2. Page Navigation and Routing
 
-These endpoints **solely** render pages without performing backend operations:
+These endpoints **solely** render pages without performing backend operations: 
 - `GET /` → Index Page
 - `GET /signup` → Signup Page 
 - `GET /upload` → Upload Page
