@@ -16,6 +16,11 @@ These endpoints **solely** render pages without performing backend operations:
 - `GET /imagedetail` → Image Detail Page
 - `GET /feedback` → Feedback Page
 - `GET /gallery` → Gallery Page
+- `GET /getImage` → Get the image id from the user session
+- `GET /images/sortBy< TimeDesc | TimeAsc | Tag >` → sort by different methods: times and tags.
+- `GET /image/<int:image_id>` → get images by image id.
+- `GET /getcurrentuserimages` → get images belongs to a user (uid is email), queried from database.
+
 ## 3. User Authentication & User Operations
 This app uses email and password to authenticate.
 The default email **`trustindicator@gmail.com`** and password **`vfiz hsgw ctke tdeu`**
@@ -42,13 +47,37 @@ To handle the image operations, the program uses Jsonify technique.
 Favorites and feedback involves database. 
 - `POST /submit_feedback` → Submits user feedback.
     - Response fail: "Error, please try again."
-    
+
+
+- `POST /register` → Regist a user, format:
+    ```json
+    {
+        "UserName": "john_doe",
+        "Email": "johndoe@example.com",
+        "LegalName": "John Doe",
+        "Password": "SecurePass123"
+    }
+    ```
+- `POST /reset-password` → Reset password for user, need email and newPassword (why need that?).
+- `POST /change-password` → Reset password for user, need email, oldPassword and newPassword.
+
+- `POST /send-code` → Send verification code to email. 
+- `POST /verify-code` → Verrify user code. The JSON request format should contain: token: The JWT token provided to the user; code: The user-entered verification code.
+    ```json
+    {
+        "token": "xxx",
+        "code": "123456"
+    }
+    ```
+# ^^ the backend program seems to registering the user by code sending and verification, but not tested.
+
 - `POST /addToFavourite` → Adds an image to the user's favorites.
     - Response fail: "Please login to add favourite."
 - `POST /checkFavourite` → Checks if an image is in the user's favorites.
     - Response: JSON object with favorite status.
 - `POST /deleteFavourite` → Removes an image from the user's favorites.
     - Response success: "Favorite removed successfully"
+- `POST /updateImageType` → Update the "type" of an image defined by imageId and imageType.
 
 ## 6. Error Code
 
