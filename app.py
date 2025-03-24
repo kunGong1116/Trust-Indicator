@@ -184,6 +184,8 @@ def getImageDetail(image_id):
         'ImageTitle': image.ImageTitle,
         'ImageDescription': image.ImageDescription,
         'UploadDate': image.UploadDate,
+        'ai_prob': image.ai_prob,
+        'visibility': image.visibility,
         'Tag': image.Tag,
         'ColorSpace': image.ColorSpace,
         'Created': image.Created,
