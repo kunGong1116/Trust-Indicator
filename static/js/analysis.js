@@ -1,8 +1,8 @@
-function AnalysisOtherImage(event){
-    window.location.href='/upload'
+function AnalysisOtherImage(event) {
+    window.location.href = '/upload'
 }
-function Gohome(event){
-    window.location.href='/'
+function Gohome(event) {
+    window.location.href = '/'
 }
 
 
@@ -37,8 +37,8 @@ function countdown() {
         numberElement.textContent = currentNumber - 1;
     } else {
         clearInterval(interval);
-        document.querySelector('.warpper-wait').style.display="none";
-        document.querySelector('.result').style.display="flex";
+        document.querySelector('.warpper-wait').style.display = "none";
+        document.querySelector('.result').style.display = "flex";
     }
 }
 var interval = setInterval(countdown, 1000);
@@ -78,6 +78,35 @@ function getRandomScores() {
         score_manipulation: Math.round(score_manipulation)
     };
 }
+
+//Trustworthiness Score algorithm
+document.addEventListener('DOMContentLoaded', function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    let imageId = urlParams.get('source');
+
+    fetch(`/getimagedetail/${imageId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
+            const original = data.original;
+            const aigc = data.aigc;
+            const manipulation = data.manipulation;
+
+            function computeTrustScore(o, a, m) {
+                let score = o - 0.3 * a - 0.5 * m;
+                score = score < 0 ? 0 : score;
+                score = score > 100 ? 100 : score;
+                return Math.round(score);
+            }
+            const trustScore = computeTrustScore(original, aigc, manipulation);
+            document.getElementById('trust-score').textContent = trustScore + "%";
+        })
+        .catch(error => console.error('Error fetching image detail:', error));
+});
+
 
 let scores = getRandomScores();
 let score_original = scores.score_original;
@@ -130,7 +159,7 @@ document.getElementById("signal2").style.backgroundRepeat = 'no-repeat';
 
 // show image
 let downloadBlobUrl = null;
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const imageDisplayDiv = document.querySelector('.image-display');
     const downloadButton = document.getElementById('Download');
 
@@ -152,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
             imageDisplayDiv.style.backgroundRepeat = 'no-repeat';  // Don't repeat the background image
         })
         .catch(error => console.error('Error fetching image:', error));
-    downloadButton.addEventListener('click', function() {
+    downloadButton.addEventListener('click', function () {
         if (downloadBlobUrl) {
 
             const downloadLink = document.createElement('a');
