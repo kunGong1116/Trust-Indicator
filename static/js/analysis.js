@@ -79,7 +79,7 @@ function getRandomScores() {
     };
 }
 
-//Trustworthiness Score algorithm
+// Trustworthiness Score algorithm
 document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
     let imageId = urlParams.get('source');
@@ -91,17 +91,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error(data.error);
                 return;
             }
-            const original = data.original;
-            const aigc = data.aigc;
-            const manipulation = data.manipulation;
 
-            function computeTrustScore(o, a, m) {
-                let score = o - 0.3 * a - 0.5 * m;
-                score = score < 0 ? 0 : score;
-                score = score > 100 ? 100 : score;
+            const aiProb = data.ai_prob;
+            const tag = data.Tag;
+
+            function computeTrustScore(ai_prob, tag) {
+                let baseScore;
+                switch (tag) {
+                    case 'Original Image':
+                        baseScore = 90;
+                        break;
+                    case 'AIGC Image':
+                        baseScore = 50;
+                        break;
+                    case 'Manipulation Image':
+                        baseScore = 30;
+                        break;
+                    default:
+                        baseScore = 70;
+                }
+
+                let score = baseScore * ((100 - ai_prob) / 100);
+                score = Math.max(0, Math.min(100, score));
                 return Math.round(score);
             }
-            const trustScore = computeTrustScore(original, aigc, manipulation);
+            const trustScore = computeTrustScore(aiProb, tag);
             document.getElementById('trust-score').textContent = trustScore + "%";
         })
         .catch(error => console.error('Error fetching image detail:', error));
