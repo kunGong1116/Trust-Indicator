@@ -184,6 +184,8 @@ def getImageDetail(image_id):
         'ImageTitle': image.ImageTitle,
         'ImageDescription': image.ImageDescription,
         'UploadDate': image.UploadDate,
+        'ai_prob': image.ai_prob,
+        'visibility': image.visibility,
         'Tag': image.Tag,
         'ColorSpace': image.ColorSpace,
         'Created': image.Created,
@@ -546,6 +548,8 @@ def upload_file():
                 new_image = Image(
                     filename=filename,
                     data=file_data,
+                    # Set default visibility to private when the image is first uploaded
+                    visibility="private",
                     user_email=current_user.Email,
                     UploadDate=upload_time,  # Save the upload time
                     ColorSpace=colorSpace if colorSpace else 'None',
@@ -602,6 +606,7 @@ def upload_file():
                 new_image = Image(
                     filename=filename,
                     data=file_data,
+                    visibility="private",
                     user_email=current_user.Email,
                     UploadDate=upload_time,  # Save the upload time
                     ColorSpace=None,
@@ -714,19 +719,27 @@ def sorted_images_by_time_asce():
 
 @app.route('/images/sortByTag')
 def sorted_images_by_tag():
+    user_email = current_user.Email
     tag = request.args.get('tag', default='')
-    if tag == 'Original':
-        images = Image.query.filter(Image.Tag == 'Original').all()
-    elif tag == 'Manipulation':
-        images = Image.query.filter(Image.Tag == 'Manipulation').all()
-    elif tag == 'AIGC':
-        images = Image.query.filter(Image.Tag == 'AIGC').all()
-    else:
-        images = Image.query.all()
 
-    image_info = [{'id': image.id, 'filename': image.filename} for image in images]
+    # Filter logic:
+    # 1. If the image is public, it is always included.
+    # 2. If the image is private, it is only included if the user's email matches the image's owner.
+    query = Image.query.filter(
+        (Image.visibility == 'public') |
+        ((Image.visibility == 'private') & (Image.user_email == user_email))
+    )
+
+    # Apply tag filter if provided
+    if tag:
+        query = query.filter(Image.Tag == tag)
+
+    images = query.all()
+    image_info = [{'id': image.id, 'filename': image.filename, 'description': image.ImageDescription} for image in images]
+
+    # Shuffle the images to return them in random order
     random.shuffle(image_info)
-    print(image_info)
+
     return jsonify(image_info)
 
 
@@ -760,6 +773,19 @@ def update_image_desc():
     else:
         return jsonify({'status': 'failed'})
 
+@app.route('/api/updateImageVisibility', methods=['POST'])
+def update_image_visibility():
+    data = request.get_json()
+    image_id = data.get('image_id')
+    visibility = data.get('visibility')
+
+    image = Image.query.get(image_id)
+    if image and visibility in ['public', 'private']:
+        image.visibility = visibility
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    else:
+        return jsonify({'status': 'failed'})
 
 @app.route('/getImage')
 def get_image_for_analysis():
