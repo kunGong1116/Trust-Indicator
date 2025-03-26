@@ -100,13 +100,13 @@ document.addEventListener('DOMContentLoaded', function () {
             function computeTrustScore(ai_prob, tag) {
                 let baseScore;
                 switch (tag) {
-                    case 'Original Image':
+                    case 'Original':
                         baseScore = 90;
                         break;
-                    case 'AIGC Image':
+                    case 'AIGC':
                         baseScore = 50;
                         break;
-                    case 'Manipulation Image':
+                    case 'Manipulation':
                         baseScore = 30;
                         break;
                     default:
