@@ -82,7 +82,7 @@ function getRandomScores() {
 // Trustworthiness Score algorithm
 document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
-    let imageId = urlParams.get('source');
+    const imageId = urlParams.get('image_id');
 
     fetch(`/getimagedetail/${imageId}`)
         .then(response => response.json())
@@ -92,8 +92,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            const aiProb = data.ai_prob;
+            // Todo: const aiProb = data.ai_prob;
+            const aiProb = 0.2;
             const tag = data.Tag;
+
 
             function computeTrustScore(ai_prob, tag) {
                 let baseScore;
@@ -179,30 +181,30 @@ document.addEventListener('DOMContentLoaded', function () {
     const descriptionElement = document.getElementById('image-description');
 
     // 从URL获取image_id
-  const urlParams = new URLSearchParams(window.location.search);
-  const imageId = urlParams.get('image_id');
+    const urlParams = new URLSearchParams(window.location.search);
+    const imageId = urlParams.get('image_id');
 
-  if (imageId) {
-    // 获取图片描述
-    fetch(`/getimagedetail/${imageId}`, { credentials: 'include' })
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch image details');
-        return response.json();
-      })
-      .then(data => {
-        const description = data.ImageDescription || 'No description provided.';
-        descriptionElement.textContent = description;
-      })
-      .catch(error => {
-        console.error('Error fetching image details:', error);
-        descriptionElement.textContent = 'Failed to load description.';
-      });
-  } else {
-    descriptionElement.textContent = 'No image ID provided.';
-  }
+    if (imageId) {
+        // 获取图片描述
+        fetch(`/getimagedetail/${imageId}`, { credentials: 'include' })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch image details');
+                return response.json();
+            })
+            .then(data => {
+                const description = data.ImageDescription || 'No description provided.';
+                descriptionElement.textContent = description;
+            })
+            .catch(error => {
+                console.error('Error fetching image details:', error);
+                descriptionElement.textContent = 'Failed to load description.';
+            });
+    } else {
+        descriptionElement.textContent = 'No image ID provided.';
+    }
 
     // 显示图片
-    fetch('/getImage', {credentials: 'include'})
+    fetch('/getImage', { credentials: 'include' })
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
