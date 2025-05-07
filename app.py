@@ -890,8 +890,9 @@ def detect_aigc():
         image_bytes = image.data
         
         # 检测图片是否为AIGC生成
-        detector = AigcDetector()
-        is_aigc, confidence, response = detector.detect_image_from_bytes(image_bytes)
+        # detector = AigcDetector()
+        is_aigc, confidence, response = True, 0.2, "Fake response"
+        # detector.detect_image_from_bytes(image_bytes)
         
         # 将检测结果存储到数据库
         image.ai_prob = confidence / 100.0  # 转换为0-1范围的概率值
@@ -1036,9 +1037,9 @@ def get_available_snippets():
             'settings': {'threshold': 50} # Default value
         },
         {
-            'type': 'megadata_complete',
-            'name': 'MegaData Completeness Check',
-            'description': 'Reject photos with incomplete MegaData',
+            'type': 'metadata_complete',
+            'name': 'MetaData Completeness Check',
+            'description': 'Reject photos with incomplete MetaData',
             'settings': {} # No additional settings needed
         }
     ]
