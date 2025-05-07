@@ -319,7 +319,7 @@ function updateSelectedSnippetsUI() {
 function getSnippetName(type) {
     const names = {
         'ai_threshold': 'AI Content Threshold',
-        'megadata_complete': 'MegaData Completeness Check'
+        'metadata_complete': 'MetaData Completeness Check'
     };
     return names[type] || type;
 }
@@ -327,7 +327,7 @@ function getSnippetName(type) {
 function getSnippetDescription(type) {
     const descriptions = {
         'ai_threshold': 'Set acceptable AI rate threshold for photos',
-        'megadata_complete': 'Reject photos with incomplete MegaData'
+        'metadata_complete': 'Reject photos with incomplete MetaData'
     };
     return descriptions[type] || '';
 }
@@ -525,8 +525,8 @@ function loadTrustProfile() {
                             let valueText = '';
                             if (snippet.type === 'ai_threshold') {
                                 valueText = `AI content must not exceed ${settings.threshold}%`;
-                            } else if (snippet.type === 'megadata_complete') {
-                                valueText = 'MegaData must be complete';
+                            } else if (snippet.type === 'metadata_complete') {
+                                valueText = 'MetaData must be complete';
                             }
 
                             snippetEl.innerHTML = `
