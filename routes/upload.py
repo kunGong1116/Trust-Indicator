@@ -1,6 +1,7 @@
 import os
 from io import BytesIO
 from datetime import datetime
+from PIL import Image as PILImage
 
 from flask import (
     Blueprint,
@@ -15,7 +16,8 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from database import Image, db
-from trust_indicator.ExifExtractor.InterfaceTester import extract_exif_data
+from routes.aigc_detector import detect_aigc
+from ExifExtractor.InterfaceTester import extract_exif_data
 
 bp = Blueprint("upload", __name__)
 
@@ -23,6 +25,51 @@ bp = Blueprint("upload", __name__)
 @bp.route("/upload")
 def upload():
     return render_template("html/upload.html")
+
+
+def create_thumbnail(original_data, max_size_kb=100, min_quality=20):
+    img = PILImage.open(BytesIO(original_data))
+
+    # 转换为RGB模式（如果是RGBA或CMYK等）
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    # 初始参数
+    quality = 85  # 初始质量
+    width, height = img.size
+    ratio = 1.0  # 初始缩放比例
+
+    output = BytesIO()
+
+    # 循环调整直到大小<=max_size_kb
+    while True:
+        # 计算新尺寸
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
+
+        # 调整尺寸
+        resized_img = img.resize((new_width, new_height), PILImage.LANCZOS)
+
+        # 尝试保存
+        output.seek(0)
+        output.truncate()
+        resized_img.save(output, format="JPEG", quality=quality, optimize=True)
+
+        # 检查大小
+        if len(output.getvalue()) <= max_size_kb * 1024:
+            break
+
+        # 调整参数
+        if quality > min_quality:
+            quality -= 5  # 先降低质量
+        else:
+            ratio *= 0.9  # 再缩小尺寸
+
+        # 防止无限循环
+        if ratio < 0.1 or quality < min_quality:
+            break
+
+    return output.getvalue()
 
 
 @bp.route("/uploadImage", methods=["POST"])
@@ -52,108 +99,20 @@ def upload_file():
             file_type = file.content_type
             original_filename = file.filename
             exif_data = extract_exif_data(image_data_io)
+
             if exif_data:
-                with open("exif_data.txt", "w") as file:
-                    for key, value in exif_data.items():
-                        file.write(f"{key}: {value}\n")
                 colorSpace = exif_data.get("ColorSpace")
                 datetime_original = exif_data.get("DateTime")
                 make = exif_data.get("Make")
                 model = exif_data.get("Model")
-                focal_length = exif_data.get("FocalLength")
-                if focal_length:
-                    if hasattr(focal_length, "numerator") and hasattr(
-                        focal_length, "denominator"
-                    ):
-                        focal_length_value = float(focal_length.numerator) / float(
-                            focal_length.denominator
-                        )
-                    else:
-                        focal_length_value = float(focal_length)
-                else:
-                    focal_length_value = None
-                aperture = exif_data.get("ApertureValue")
-                if aperture:
-                    if hasattr(aperture, "numerator") and hasattr(
-                        aperture, "denominator"
-                    ):
-                        aperture_length_value = float(aperture.numerator) / float(
-                            aperture.denominator
-                        )
-                    else:
-                        aperture_length_value = float(aperture)
-                else:
-                    aperture_length_value = None
-                exposure = exif_data.get("ExposureProgram")
-                if exposure:
-                    if hasattr(exposure, "numerator") and hasattr(
-                        exposure, "denominator"
-                    ):
-                        exposure_length_value = float(exposure.numerator) / float(
-                            exposure.denominator
-                        )
-                    else:
-                        exposure_length_value = float(exposure)
-                else:
-                    exposure_length_value = None
-                iso = exif_data.get("ISOSpeedRatings")
-                if iso:
-                    if hasattr(iso, "numerator") and hasattr(iso, "denominator"):
-                        iso_length_value = float(iso.numerator) / float(iso.denominator)
-                    else:
-                        iso_length_value = float(iso)
-                else:
-                    iso_length_value = None
-
-                flash = exif_data.get("Flash")
-                if flash:
-                    if hasattr(flash, "numerator") and hasattr(flash, "denominator"):
-                        flash_length_value = float(flash.numerator) / float(
-                            flash.denominator
-                        )
-                    else:
-                        flash_length_value = float(flash)
-                else:
-                    flash_length_value = None
-
-                image_width = exif_data.get("ExifImageWidth")
-                if image_width:
-                    if hasattr(image_width, "numerator") and hasattr(
-                        image_width, "denominator"
-                    ):
-                        image_width = float(image_width.numerator) / float(
-                            image_width.denominator
-                        )
-                    else:
-                        image_width = float(image_width)
-                else:
-                    image_width = None
-
-                image_length = exif_data.get("ExifImageHeight")
-                if image_length:
-                    if hasattr(image_length, "numerator") and hasattr(
-                        image_length, "denominator"
-                    ):
-                        image_length = float(image_length.numerator) / float(
-                            image_length.denominator
-                        )
-                    else:
-                        image_length = float(image_length)
-                else:
-                    image_length = None
-
-                altitude = exif_data.get("GPSAltitude")
-                if altitude:
-                    if hasattr(altitude, "numerator") and hasattr(
-                        altitude, "denominator"
-                    ):
-                        altitude = float(altitude.numerator) / float(
-                            altitude.denominator
-                        )
-                    else:
-                        altitude = float(altitude)
-                else:
-                    altitude = None
+                focal_length = extract_exif_value(exif_data, "FocalLength")
+                aperture = extract_exif_value(exif_data, "ApertureValue")
+                exposure = extract_exif_value(exif_data, "ExposureProgram")
+                iso = extract_exif_value(exif_data, "ISOSpeedRatings")
+                flash = extract_exif_value(exif_data, "Flash")
+                image_width = extract_exif_value(exif_data, "ExifImageWidth")
+                image_length = extract_exif_value(exif_data, "ExifImageHeight")
+                altitude = extract_exif_value(exif_data, "GPSAltitude")
 
                 latitudeRef = exif_data.get("GPSLatitudeRef")
                 latitude = exif_data.get("GPSLatitude")
@@ -175,22 +134,12 @@ def upload_file():
                     "Make": make if make else "None",
                     "Model": model if model else "None",
                     "FocalLength": (
-                        focal_length_value if focal_length_value is not None else "None"
+                        focal_length if focal_length is not None else "None"
                     ),
-                    "Aperture": (
-                        aperture_length_value
-                        if aperture_length_value is not None
-                        else "None"
-                    ),
-                    "Exposure": (
-                        exposure_length_value
-                        if exposure_length_value is not None
-                        else "None"
-                    ),
-                    "ISO": iso_length_value if iso_length_value is not None else "None",
-                    "Flash": (
-                        flash_length_value if flash_length_value is not None else "None"
-                    ),
+                    "Aperture": (aperture if aperture is not None else "None"),
+                    "Exposure": (exposure if exposure is not None else "None"),
+                    "ISO": iso if iso is not None else "None",
+                    "Flash": (flash if flash is not None else "None"),
                     "ImageWidth": image_width if image_width is not None else "None",
                     "ImageLength": image_length if image_length is not None else "None",
                     "Altitude": altitude if altitude is not None else "None",
@@ -201,46 +150,7 @@ def upload_file():
                     ),
                     "Longitude": longitude if longitude is not None else "None",
                 }
-                upload_time = datetime.utcnow()
-                new_image = Image(
-                    filename=filename,
-                    data=file_data,
-                    # Set default visibility to private when the image is first uploaded
-                    visibility="private",
-                    user_email=current_user.Email,
-                    UploadDate=upload_time,  # Save the upload time
-                    ColorSpace=colorSpace if colorSpace else "None",
-                    Created=datetime_original if datetime_original else "None",
-                    Make=make if make else "None",
-                    Model=model if model else "None",
-                    FocalLength=focal_length_value,
-                    Aperture=aperture_length_value,
-                    Exposure=exposure_length_value,
-                    ISO=iso_length_value,
-                    Flash=flash_length_value,
-                    ImageWidth=image_width,
-                    ImageLength=image_length,
-                    Altitude=altitude,
-                    LatitudeRef=latitudeRef if latitudeRef else "None",
-                    Latitude=latitude,
-                    LongitudeRef=longitudeRef if longitudeRef else "None",
-                    Longitude=longitude,
-                    # Add other metadata fields as necessary
-                )
 
-                db.session.add(new_image)
-                db.session.commit()
-
-                return jsonify(
-                    {
-                        "message": "Image successfully uploaded",
-                        "filename": original_filename,
-                        "file_size": file_size,
-                        "file_type": file_type,
-                        "metadata": metadata,
-                        "id": new_image.id,
-                    }
-                )
             else:
                 metadata = {
                     "ColorSpace": "unidentifiable",
@@ -261,47 +171,84 @@ def upload_file():
                     "Longitude": "None",
                 }
 
-                upload_time = datetime.utcnow()
-                new_image = Image(
-                    filename=filename,
-                    data=file_data,
-                    visibility="private",
-                    user_email=current_user.Email,
-                    UploadDate=upload_time,  # Save the upload time
-                    ColorSpace=None,
-                    Created=None,
-                    Make=None,
-                    Model=None,
-                    FocalLength=None,
-                    Aperture=None,
-                    Exposure=None,
-                    ISO=None,
-                    Flash=None,
-                    ImageWidth=None,
-                    ImageLength=None,
-                    Altitude=None,
-                    LatitudeRef=None,
-                    Latitude=None,
-                    LongitudeRef=None,
-                    Longitude=None,
-                    # Add other metadata fields as necessary
-                )
+                colorSpace = None
+                datetime_original = None
+                make = None
+                model = None
+                focal_length = None
+                aperture = None
+                exposure = None
+                iso = None
+                flash = None
+                image_width = None
+                image_length = None
+                altitude = None
+                latitudeRef = None
+                latitude = None
+                longitudeRef = None
+                longitude = None
 
-                db.session.add(new_image)
-                db.session.commit()
-                return jsonify(
-                    {
-                        "message": "Image successfully uploaded",
-                        "filename": original_filename,
-                        "file_size": file_size,
-                        "file_type": file_type,
-                        "metadata": metadata,
-                        "id": new_image.id,
-                    }
-                )
+            # save the file to the database
+            upload_time = datetime.utcnow()
+            new_image = Image(
+                filename=filename,
+                thumb_data=create_thumbnail(file_data),
+                data=file_data,
+                # Set default visibility to private when the image is first uploaded
+                visibility="private",
+                user_email=current_user.Email,
+                UploadDate=upload_time,  # Save the upload time
+                ColorSpace=colorSpace if colorSpace else "None",
+                Created=datetime_original if datetime_original else "None",
+                Make=make if make else "None",
+                Model=model if model else "None",
+                FocalLength=focal_length,
+                Aperture=aperture,
+                Exposure=exposure,
+                ISO=iso,
+                Flash=flash,
+                ImageWidth=image_width,
+                ImageLength=image_length,
+                Altitude=altitude,
+                LatitudeRef=latitudeRef if latitudeRef else "None",
+                Latitude=latitude,
+                LongitudeRef=longitudeRef if longitudeRef else "None",
+                Longitude=longitude,
+                # Add other metadata fields as necessary
+            )
+
+            db.session.add(new_image)
+            db.session.commit()
+
+            detect_aigc(new_image.id)
+
+            return jsonify(
+                {
+                    "message": "Image successfully uploaded",
+                    "filename": original_filename,
+                    "file_size": file_size,
+                    "file_type": file_type,
+                    "metadata": metadata,
+                    "id": new_image.id,
+                }
+            )
 
         else:
             return jsonify(error="Allowed file types are: png, jpg, jpeg, gif"), 400
+
+
+def extract_exif_value(exif_data: dict, key):
+    """通用EXIF值提取和分数转换函数"""
+    value = exif_data.get(key)
+
+    if value is None:
+        return None
+    if hasattr(value, "numerator") and hasattr(value, "denominator"):
+        return float(value.numerator) / float(value.denominator)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return value
 
 
 @bp.route("/updateImageType", methods=["POST"])

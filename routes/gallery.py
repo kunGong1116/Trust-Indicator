@@ -6,6 +6,7 @@ from flask import Blueprint, Flask, render_template, send_file, jsonify, request
 from flask_login import current_user
 
 from database import Image
+from logger import print
 
 bp = Blueprint("gallery", __name__)
 
@@ -22,8 +23,14 @@ def GotoGallery():
 def get_image(image_id):
     image = Image.query.get(image_id)
     if image and image.data:
+        thumb = request.args.get("thumb", "")
+        if thumb:
+            data = BytesIO(image.thumb_data)
+        else:
+            data = BytesIO(image.data)
+
         return send_file(
-            BytesIO(image.data),
+            data,
             mimetype="image/jpeg",  # or 'image/png' etc depending on your image type
             as_attachment=True,
             download_name=image.filename,
@@ -95,40 +102,47 @@ def sorted_images_by_time_asce():
 
 @bp.route("/images/sortByTag")
 def sorted_images_by_tag():
-    user_email = current_user.Email
     tag = request.args.get("tag", default="")
     search = request.args.get("search", default="")
+    page = request.args.get("page", default=1, type=int)
+    per_page = request.args.get("per_page", default=10, type=int)
 
-    # Filter logic:
-    # 1. If the image is public, it is always included.
-    # 2. If the image is private, it is only included if the user's email matches the image's owner.
-    query = Image.query.filter(
-        (Image.visibility == "public")
-        | ((Image.visibility == "private") & (Image.user_email == user_email))
-    )
+    try:
+        user_email = current_user.Email
+        query = Image.query.filter(
+            (Image.visibility == "public")
+            | ((Image.visibility == "private") & (Image.user_email == user_email))
+        )
+    except AttributeError:
+        query = Image.query.filter((Image.visibility == "public"))
 
-    # Apply tag filter if provided
     if tag:
         query = query.filter(Image.Tag == tag)
 
     if search:
-        search_pattern = f"%{search}%"  # using sql like
+        search_pattern = f"%{search}%"
         query = query.filter(Image.ImageDescription.ilike(search_pattern))
 
-    images = query.all()
+    # 添加分页
+    paginated_images = query.paginate(page=page, per_page=per_page, error_out=False)
+
     image_info = [
         {
             "id": image.id,
             "filename": image.filename,
             "description": image.ImageDescription,
         }
-        for image in images
+        for image in paginated_images.items
     ]
 
-    # Shuffle the images to return them in random order
-    random.shuffle(image_info)
-
-    return jsonify(image_info)
+    return jsonify(
+        {
+            "images": image_info,
+            "total": paginated_images.total,
+            "pages": paginated_images.pages,
+            "current_page": paginated_images.page,
+        }
+    )
 
 
 def init(app: Flask):
